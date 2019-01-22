@@ -3,11 +3,7 @@ version: 0.2
 phases:
   install:
     commands:
-    - apt-get install -y python
-    - curl -O https://bootstrap.pypa.io/get-pip.py
-    - python get-pip.py
-    - export PATH=/root/.local/bin:$PATH
-    - pip install awscli --upgrade
+    - apt-get -y update && apt-get -y install awscli
     - curl -O http://apache.communilink.net/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.zip
     - unzip apache-maven-3.6.0-bin.zip -d /opt
     - export PATH=/opt/apache-maven-3.6.0/bin:$PATH
