@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+    - apt-get install -y python
+    - curl -O https://bootstrap.pypa.io/get-pip.py
+    - python get-pip.py --user
+    - export PATH=/root/.local/bin:$PATH
+    - pip install awscli --upgrade --user
+    - curl -O http://apache.communilink.net/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.zip
+    - unzip apache-maven-3.6.0-bin.zip -d /opt
+    - export PATH=/opt/apache-maven-3.6.0/bin:$PATH
+#    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+#    - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+#    - sudo apt-get update
+#    - apt-cache policy docker-ce
+#    - sudo apt-get install -y docker-ce
+#    - sudo systemctl status docker
+  pre_build:
+    commands:
+    - mvn -version
+    - docker --version
+    - echo "[info] logging in to Amazon ECR..."
+    - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+  build:
+    commands:
+    - echo "[info] build java"
+    - mvn clean install 
+    - mkdir -p ${ServiceName}
+    - mv target/*.jar ${ServiceName}.jar
+    - echo "[info] build docker image..."
+    - docker build -f deploy/container/${ENVIRONMENT}/docker/Dockerfile -t ${PROJECT_NAME}-${ENVIRONMENT}-${COMPONENT}-service-${SERVICE_NAME}-java:${SERVICE_VERSION} .
+    - echo "[info] tag docker image..."
+    - GIT_HASH=$(git log -1 --format="%h")
+    - echo $GIT_HASH
+    - docker tag ${PROJECT_NAME}-${ENVIRONMENT}-${COMPONENT}-service-${SERVICE_NAME}-java:${SERVICE_VERSION} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com.cn/${PROJECT_NAME}-${COMPONENT}-service-${SERVICE_NAME}:${ENVIRONMENT}-java-${SERVICE_VERSION}
+    - docker tag ${PROJECT_NAME}-${ENVIRONMENT}-${COMPONENT}-service-${SERVICE_NAME}-java:${SERVICE_VERSION} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com.cn/${PROJECT_NAME}-${COMPONENT}:latest
+    - echo "[info] push docker image..."
+#    - docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com.cn/${PROJECT_NAME}-${COMPONENT}-${LAYER}:${ENVIRONMENT}-java-${SERVICE_VERSION}
+    - docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com.cn/${PROJECT_NAME}-${COMPONENT}-service-${SERVICE_NAME}:${ENVIRONMENT}-java-${SERVICE_VERSION}
